@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { ArrowLeft, ArrowRight, Clock, Volume2, Mic, Check } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
@@ -103,7 +104,7 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
         <button onClick={handleExit} className="exit-cooking-button">
           ← Exit Cooking Mode
         </button>
-        <h2 className="recipe-title-cooking">🍳 {recipe.title}</h2>
+        <h2 className="recipe-title-cooking">{recipe.title}</h2>
       </div>
 
       {/* Progress Bar */}
@@ -128,7 +129,7 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
 
           {currentStepData.length && (
             <div className="step-timing">
-              ⏱️ Estimated time: {currentStepData.length.number} {currentStepData.length.unit}
+              <Clock size={14} /> Estimated time: {currentStepData.length.number} {currentStepData.length.unit}
             </div>
           )}
 
@@ -159,7 +160,7 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
       {/* Navigation Controls */}
       <div className="cooking-controls">
         <button onClick={handlePrevious} disabled={isFirstStep} className="nav-button">
-          ⬅️ Previous
+          <ArrowLeft size={16} /> Previous
         </button>
 
         <button
@@ -167,11 +168,11 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
           className="nav-button repeat-button"
           disabled={isSpeaking}
         >
-          🔊 Repeat
+          <Volume2 size={16} /> Repeat
         </button>
 
         <button onClick={handleNext} className="nav-button primary">
-          {isLastStep ? '✓ Finish' : 'Next ➡️'}
+          {isLastStep ? <><Check size={16} /> Finish</> : <>Next <ArrowRight size={16} /></>}
         </button>
       </div>
 
@@ -185,12 +186,12 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
           {isListening ? (
             <>
               <span className="pulse"></span>
-              🎤 Listening...
+              <Mic size={20} /> Listening...
             </>
           ) : isSpeaking ? (
-            '🔊 Speaking...'
+            <><Volume2 size={20} /> Speaking...</>
           ) : (
-            '🎤 Voice Command'
+            <><Mic size={20} /> Voice Command</>
           )}
         </button>
         {transcript && <p className="voice-transcript">You said: "{transcript}"</p>}
@@ -202,7 +203,7 @@ const CookingMode: React.FC<CookingModeProps> = ({ recipe }) => {
       {/* Completion Message */}
       {isLastStep && (
         <div className="completion-message">
-          <p>🎉 Almost done! This is the final step.</p>
+          <p><Check size={16} /> Almost done! This is the final step.</p>
         </div>
       )}
     </div>

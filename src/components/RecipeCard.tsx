@@ -1,4 +1,5 @@
 import React from 'react';
+import { Heart, Clock, Users, Mic, ShoppingCart, Leaf, Wheat } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Recipe } from '../types';
 import '../styles/RecipeCard.css';
@@ -55,13 +56,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, index }) => {
           onClick={handleToggleFavorite}
           title={isFavorite(recipe.id) ? 'Remove from favorites' : 'Add to favorites'}
         >
-          {isFavorite(recipe.id) ? '❤️' : '🤍'}
+          <Heart size={18} fill={isFavorite(recipe.id) ? 'currentColor' : 'none'} />
         </button>
-        {recipe.hasVoiceGuidance && (
-          <span className="voice-badge" title="Voice guidance available">
-            🎤
-          </span>
-        )}
       </div>
 
       <div className="recipe-content">
@@ -72,10 +68,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, index }) => {
 
         <div className="recipe-meta">
           {recipe.readyInMinutes && (
-            <span className="meta-item">⏱️ {recipe.readyInMinutes} min</span>
+            <span className="meta-item"><Clock size={14} /> {recipe.readyInMinutes} min</span>
           )}
           {recipe.servings && (
-            <span className="meta-item">🍽️ {recipe.servings} servings</span>
+            <span className="meta-item"><Users size={14} /> {recipe.servings} servings</span>
           )}
         </div>
 
@@ -83,11 +79,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, index }) => {
           <div className="diet-tags">
             {recipe.diets.slice(0, 3).map((diet, idx) => (
               <span key={idx} className="diet-tag">
-                {diet === 'vegetarian' && '🌱'}
-                {diet === 'vegan' && '🥬'}
-                {diet === 'gluten-free' && '🌾'}
-                {diet === 'dairy-free' && '🥛'}
-                {diet === 'keto' && '🥑'}
+                {(diet === 'vegetarian' || diet === 'vegan') && <Leaf size={12} />}
+                {diet === 'gluten-free' && <Wheat size={12} />}
                 {diet}
               </span>
             ))}
@@ -108,10 +101,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, index }) => {
             }}
             disabled={!recipe.hasVoiceGuidance}
           >
-            🎙️ Start Cooking
+            <Mic size={14} /> Start Cooking
           </button>
           <button className="action-button secondary" onClick={handleAddToList}>
-            🛒 Add Ingredients
+            <ShoppingCart size={14} /> Add Ingredients
           </button>
         </div>
       </div>

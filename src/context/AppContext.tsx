@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import {
   Recipe,
   Ingredient,
@@ -141,7 +141,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   );
 
   // Load preferences from localStorage on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const saved = localStorage.getItem('chefmate-preferences');
     if (saved) {
       try {
@@ -162,7 +162,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   // Save favorites to localStorage
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem('chefmate-favorites', JSON.stringify(favorites));
   }, [favorites]);
 

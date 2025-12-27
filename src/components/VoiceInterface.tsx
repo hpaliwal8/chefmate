@@ -1,4 +1,5 @@
 import React, { useState, useCallback, FormEvent, ChangeEvent } from 'react';
+import { ChefHat, Mic, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
@@ -8,8 +9,6 @@ import CookingMode from './CookingMode';
 import ShoppingList from './ShoppingList';
 import { ConversationMessage } from '../types';
 import '../styles/VoiceInterface.css';
-
-type InputMode = 'voice' | 'text';
 
 interface Intent {
   type: 'search' | 'details' | 'ingredients' | 'cooking' | 'general';
@@ -29,14 +28,14 @@ const VoiceInterface: React.FC = () => {
     addToConversation,
   } = useAppContext();
 
-  const [inputMode, setInputMode] = useState<InputMode>('voice');
   const [textInput, setTextInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInputCollapsed, setIsInputCollapsed] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([
     {
       type: 'assistant',
-      text: "👋 Hi! I'm ChefMate, your voice cooking assistant. What would you like to cook today?",
+      text: "Hi! I'm ChefMate, your voice cooking assistant. What would you like to cook today?",
       timestamp: new Date(),
     },
   ]);
@@ -130,7 +129,8 @@ const VoiceInterface: React.FC = () => {
     return [];
   };
 
-  // Classify user intent
+  // Classify user intent (super duper basic regex based)
+  // To be replaced by AWS Lex soon
   const classifyIntent = useCallback(
     (query: string): Intent => {
       // Search for recipes
@@ -189,6 +189,8 @@ const VoiceInterface: React.FC = () => {
 
       if (results.length === 0) {
         addAssistantMessage("I couldn't find any recipes matching that. Try something else?");
+        // Show suggestions again since no results found
+        setShowSuggestions(true);
       } else {
         const message = `I found ${results.length} delicious recipes! ${results
           .slice(0, 3)
@@ -210,6 +212,8 @@ const VoiceInterface: React.FC = () => {
         addAssistantMessage(
           "Please search for recipes first, or specify which recipe you'd like to know about."
         );
+        // Show suggestions again since no recipe context
+        setShowSuggestions(true);
         return;
       }
 
@@ -237,6 +241,8 @@ const VoiceInterface: React.FC = () => {
         addAssistantMessage(
           "I couldn't find recipes with those ingredients. Try different ingredients?"
         );
+        // Show suggestions again since no results found
+        setShowSuggestions(true);
       } else {
         addAssistantMessage(
           `Great! I found ${results.length} recipes you can make. The top options are: ${results
@@ -253,6 +259,8 @@ const VoiceInterface: React.FC = () => {
   const handleCookingIntent = useCallback(() => {
     if (!currentRecipe) {
       addAssistantMessage('Please select a recipe first!');
+      // Show suggestions again since no recipe selected
+      setShowSuggestions(true);
       return;
     }
 
@@ -274,6 +282,8 @@ const VoiceInterface: React.FC = () => {
     addAssistantMessage(
       'I can help you find recipes, get cooking instructions, or answer questions about ingredients. What would you like to do?'
     );
+    // Show suggestions again since query wasn't understood
+    setShowSuggestions(true);
   }, [addAssistantMessage]);
 
   // Process user query
@@ -309,6 +319,8 @@ const VoiceInterface: React.FC = () => {
           (err as Error).message || 'Sorry, I had trouble processing that. Please try again.';
         addAssistantMessage(errorMessage);
         setError(errorMessage);
+        // Show suggestions again on error
+        setShowSuggestions(true);
       } finally {
         setIsLoading(false);
       }
@@ -385,6 +397,15 @@ const VoiceInterface: React.FC = () => {
 
   // Handle suggestion clicks
   const handleSuggestion = (suggestion: string) => {
+    // Add user message to conversation
+    setConversationMessages((prev) => [
+      ...prev,
+      {
+        type: 'user' as const,
+        text: suggestion,
+        timestamp: new Date(),
+      },
+    ]);
     processQuery(suggestion);
   };
 
@@ -416,7 +437,7 @@ const VoiceInterface: React.FC = () => {
             {conversationMessages.map((msg, idx) => (
               <div key={idx} className={`message ${msg.type}-message`}>
                 <div className="message-content">
-                  {msg.type === 'assistant' && <span className="chef-icon">👨‍🍳</span>}
+                  {msg.type === 'assistant' && <span className="chef-icon"><ChefHat size={24} /></span>}
                   <p>{msg.text}</p>
                 </div>
               </div>
@@ -424,7 +445,7 @@ const VoiceInterface: React.FC = () => {
             {isLoading && (
               <div className="message assistant-message">
                 <div className="message-content">
-                  <span className="chef-icon">👨‍🍳</span>
+                  <span className="chef-icon"><ChefHat size={24} /></span>
                   <div className="typing-indicator">
                     <span></span>
                     <span></span>
@@ -464,52 +485,99 @@ const VoiceInterface: React.FC = () => {
         <ShoppingList />
       </div>
 
-      {/* Input Controls */}
-      <div className="input-container">
-        <div className="mode-toggle">
-          <button
-            className={inputMode === 'voice' ? 'active' : ''}
-            onClick={() => setInputMode('voice')}
-          >
-            🎤 Voice
-          </button>
-          <button
-            className={inputMode === 'text' ? 'active' : ''}
-            onClick={() => setInputMode('text')}
-          >
-            ⌨️ Text
-          </button>
-        </div>
+      {/* Floating Mic Button (when collapsed) */}
+      {isInputCollapsed && (
+        <button
+          className={`floating-mic-button ${isListening ? 'listening' : ''} ${isSpeaking ? 'speaking' : ''}`}
+          onClick={handleVoiceClick}
+          disabled={isListening || isSpeaking}
+        >
+          {isListening && <span className="pulse"></span>}
+          <Mic size={24} />
+        </button>
+      )}
 
-        {inputMode === 'voice' ? (
-          <div className="voice-controls">
+      {/* Expand Button (when collapsed) */}
+      {isInputCollapsed && (
+        <button
+          className="expand-input-button"
+          onClick={() => setIsInputCollapsed(false)}
+          aria-label="Expand input panel"
+        >
+          <ChevronUp size={18} />
+        </button>
+      )}
+
+      {/* Input Controls */}
+      <div className={`input-container ${isInputCollapsed ? 'collapsed' : ''}`}>
+        <button
+          className="collapse-toggle"
+          onClick={() => setIsInputCollapsed(!isInputCollapsed)}
+          aria-label={isInputCollapsed ? 'Expand input panel' : 'Collapse input panel'}
+        >
+          {isInputCollapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {!isInputCollapsed && (
+          <form className="unified-input-bar" onSubmit={handleTextSubmit}>
+            {/* Mic Button */}
             <button
-              className={`voice-button ${isListening ? 'listening' : ''} ${isSpeaking ? 'speaking' : ''}`}
+              type="button"
+              className={`mic-button ${isListening ? 'listening' : ''} ${isSpeaking ? 'speaking' : ''}`}
               onClick={handleVoiceClick}
-              disabled={isListening || isSpeaking}
+              disabled={isSpeaking}
+              aria-label="Voice input"
             >
-              {isListening && <span className="pulse"></span>}
-              🎤 {isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Tap to Speak'}
+              {isListening && <span className="mic-pulse"></span>}
+              <svg
+                className="mic-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
             </button>
-            {transcript && <p className="transcript">You said: "{transcript}"</p>}
-            {voiceError && <p className="error-message">{voiceError}</p>}
-          </div>
-        ) : (
-          <form className="text-input-form" onSubmit={handleTextSubmit}>
+
+            {/* Text Input */}
             <input
               type="text"
-              value={textInput}
+              value={isListening ? transcript : textInput}
               onChange={handleTextInputChange}
-              placeholder="Type your question..."
-              className="text-input"
+              placeholder={isListening ? 'Listening...' : 'Ask me anything about cooking...'}
+              className="unified-text-input"
+              disabled={isListening}
             />
-            <button type="submit" className="send-button" disabled={!textInput.trim()}>
-              Send
+
+            {/* Send Button */}
+            <button
+              type="submit"
+              className="unified-send-button"
+              disabled={isListening || (!textInput.trim() && !transcript)}
+              aria-label="Send message"
+            >
+              <svg
+                className="send-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
+
+            {/* Error/Status Messages */}
+            {(voiceError || error) && (
+              <p className="input-error">{voiceError || error}</p>
+            )}
           </form>
         )}
-
-        {error && <p className="error-message">{error}</p>}
       </div>
     </div>
   );

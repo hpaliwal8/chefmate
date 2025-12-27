@@ -1,4 +1,5 @@
 import React, { useState, ChangeEvent } from 'react';
+import { ShoppingCart, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { ShoppingListItem } from '../types';
 import '../styles/ShoppingList.css';
@@ -49,10 +50,10 @@ const ShoppingList: React.FC = () => {
       <div className="shopping-list-header" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="header-content">
           <h3>
-            🛒 Shopping List
+            <ShoppingCart size={18} /> Shopping List
             {uncheckedCount > 0 && <span className="item-count">{uncheckedCount}</span>}
           </h3>
-          <button className="toggle-button">{isExpanded ? '▼' : '▲'}</button>
+          <button className="toggle-button">{isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}</button>
         </div>
       </div>
 
@@ -104,7 +105,7 @@ const ShoppingList: React.FC = () => {
                           className="remove-button"
                           title="Remove item"
                         >
-                          ✕
+                          <X size={14} />
                         </button>
                       </li>
                     ))}
@@ -140,7 +141,7 @@ const ShoppingList: React.FC = () => {
                       className="remove-button"
                       title="Remove item"
                     >
-                      ✕
+                      <X size={14} />
                     </button>
                   </li>
                 ))}

@@ -7,6 +7,7 @@
     "@aws-sdk/client-lex-runtime-v2": "^3.400.0",
     "@aws-sdk/client-polly": "^3.400.0",
     "axios": "^1.5.0",
+    "lucide-react": "^0.562.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
