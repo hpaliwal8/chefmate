@@ -126,6 +126,22 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       description: 'Generate meal plans from Spoonacular API',
     });
 
+    const similarRecipesLambda = new NodejsFunction(this, 'SimilarRecipesFunction', {
+      ...lambdaConfig,
+      entry: path.join(__dirname, '../lambda/similar-recipes/index.ts'),
+      handler: 'handler',
+      functionName: 'chefmate-similar-recipes',
+      description: 'Get similar recipes from Spoonacular API',
+    });
+
+    const ingredientSubstitutesLambda = new NodejsFunction(this, 'IngredientSubstitutesFunction', {
+      ...lambdaConfig,
+      entry: path.join(__dirname, '../lambda/ingredient-substitutes/index.ts'),
+      handler: 'handler',
+      functionName: 'chefmate-ingredient-substitutes',
+      description: 'Get ingredient substitutes from Spoonacular API',
+    });
+
     // ==================== User Data Lambda Functions ====================
     const userPreferencesLambda = new NodejsFunction(this, 'UserPreferencesFunction', {
       ...userDataLambdaConfig,
@@ -217,6 +233,14 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
     const mealPlanResource = api.root.addResource('meal-plan');
     const generateResource = mealPlanResource.addResource('generate');
 
+    // Similar recipes resource: /recipes/{recipeId}/similar
+    const similarResource = recipeIdResource.addResource('similar');
+
+    // Food/ingredients resources
+    const foodResource = api.root.addResource('food');
+    const ingredientsResource = foodResource.addResource('ingredients');
+    const substitutesResource = ingredientsResource.addResource('substitutes');
+
     const userResource = api.root.addResource('user');
     const preferencesResource = userResource.addResource('preferences');
     const favoritesResource = userResource.addResource('favorites');
@@ -249,6 +273,28 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
     generateResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(mealPlannerLambda, {
+        proxy: true,
+      }),
+      {
+        apiKeyRequired: true,
+      }
+    );
+
+    // Similar Recipes: GET /recipes/{recipeId}/similar
+    similarResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(similarRecipesLambda, {
+        proxy: true,
+      }),
+      {
+        apiKeyRequired: true,
+      }
+    );
+
+    // Ingredient Substitutes: GET /food/ingredients/substitutes
+    substitutesResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(ingredientSubstitutesLambda, {
         proxy: true,
       }),
       {

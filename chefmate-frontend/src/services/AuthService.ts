@@ -10,11 +10,21 @@ import {
 const USER_POOL_ID = process.env.REACT_APP_COGNITO_USER_POOL_ID || '';
 const CLIENT_ID = process.env.REACT_APP_COGNITO_CLIENT_ID || '';
 
-// Initialize the User Pool
-const userPool = new CognitoUserPool({
-  UserPoolId: USER_POOL_ID,
-  ClientId: CLIENT_ID,
-});
+// Lazy initialization of User Pool - only create when both IDs are valid
+let userPool: CognitoUserPool | null = null;
+
+function getUserPool(): CognitoUserPool {
+  if (!userPool) {
+    if (!USER_POOL_ID || !CLIENT_ID) {
+      throw new Error('Cognito is not configured. Please set REACT_APP_COGNITO_USER_POOL_ID and REACT_APP_COGNITO_CLIENT_ID.');
+    }
+    userPool = new CognitoUserPool({
+      UserPoolId: USER_POOL_ID,
+      ClientId: CLIENT_ID,
+    });
+  }
+  return userPool;
+}
 
 export interface AuthUser {
   username: string;
@@ -46,7 +56,7 @@ export function signUp(email: string, password: string): Promise<CognitoUser> {
       }),
     ];
 
-    userPool.signUp(
+    getUserPool().signUp(
       email, // Use email as username
       password,
       attributeList,
@@ -73,7 +83,7 @@ export function confirmSignUp(email: string, code: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.confirmRegistration(code, true, (err, result) => {
@@ -93,7 +103,7 @@ export function resendConfirmationCode(email: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.resendConfirmationCode((err, result) => {
@@ -113,7 +123,7 @@ export function signIn(email: string, password: string): Promise<CognitoUserSess
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     const authDetails = new AuthenticationDetails({
@@ -145,7 +155,8 @@ export function signIn(email: string, password: string): Promise<CognitoUserSess
  * Sign out the current user
  */
 export function signOut(): void {
-  const cognitoUser = userPool.getCurrentUser();
+  if (!isCognitoConfigured()) return;
+  const cognitoUser = getUserPool().getCurrentUser();
   if (cognitoUser) {
     cognitoUser.signOut();
   }
@@ -156,7 +167,12 @@ export function signOut(): void {
  */
 export function getCurrentUser(): Promise<AuthUser | null> {
   return new Promise((resolve, reject) => {
-    const cognitoUser = userPool.getCurrentUser();
+    if (!isCognitoConfigured()) {
+      resolve(null);
+      return;
+    }
+
+    const cognitoUser = getUserPool().getCurrentUser();
 
     if (!cognitoUser) {
       resolve(null);
@@ -193,7 +209,12 @@ export function getCurrentUser(): Promise<AuthUser | null> {
  */
 export function getSession(): Promise<CognitoUserSession | null> {
   return new Promise((resolve, reject) => {
-    const cognitoUser = userPool.getCurrentUser();
+    if (!isCognitoConfigured()) {
+      resolve(null);
+      return;
+    }
+
+    const cognitoUser = getUserPool().getCurrentUser();
 
     if (!cognitoUser) {
       resolve(null);
@@ -233,7 +254,7 @@ export function forgotPassword(email: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.forgotPassword({
@@ -258,7 +279,7 @@ export function confirmForgotPassword(
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.confirmPassword(code, newPassword, {

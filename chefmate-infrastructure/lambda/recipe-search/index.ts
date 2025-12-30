@@ -23,6 +23,8 @@ import {
  * - number: Number of results (default: 10, max: 100)
  * - offset: Results offset for pagination
  * - includeNutrition: Include nutrition info (default: true)
+ * - ingredients: Comma-separated list of ingredients to include (for ingredient-based search)
+ * - excludeIngredients: Comma-separated list of ingredients to exclude
  */
 export async function handler(
   event: APIGatewayProxyEvent
@@ -53,6 +55,14 @@ export async function handler(
       fillIngredients: true,
       instructionsRequired: true,
     };
+
+    // Add ingredient-based search parameters
+    if (params.ingredients) {
+      searchParams.includeIngredients = params.ingredients;
+    }
+    if (params.excludeIngredients) {
+      searchParams.excludeIngredients = params.excludeIngredients;
+    }
 
     // Add multiple diet/intolerances if provided
     if (params.intolerances) {

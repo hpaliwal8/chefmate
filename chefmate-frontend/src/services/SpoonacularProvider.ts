@@ -52,9 +52,13 @@ class SpoonacularProvider {
 
   /**
    * Build URL for Vercel proxy (passes endpoint as query param)
+   * Always uses /api/spoonacular regardless of AWS backend setting
+   * Used for endpoints not yet migrated to AWS Lambda
    */
   private buildVercelURL(endpoint: string, params: Record<string, unknown> = {}): string {
-    const url = new URL(this.baseUrl, window.location.origin);
+    // Always use Vercel proxy path, not the AWS base URL
+    const vercelProxyPath = '/api/spoonacular';
+    const url = new URL(vercelProxyPath, window.location.origin);
     url.searchParams.append('endpoint', endpoint);
 
     Object.entries(params).forEach(([key, value]) => {
@@ -154,29 +158,45 @@ class SpoonacularProvider {
 
   /**
    * Search recipes by available ingredients
-   * Note: This endpoint still uses Vercel proxy as AWS Lambda doesn't have this endpoint yet
+   * AWS: Uses /recipes/search with ingredients parameter
+   * Vercel: Uses /recipes/findByIngredients
    */
   async searchByIngredients(
     ingredients: string[] | string,
     options: SearchByIngredientsOptions = {}
   ): Promise<SpoonacularRecipe[]> {
     try {
-      // Always use Vercel proxy for this endpoint (not implemented in AWS yet)
-      const url = this.buildVercelURL('/recipes/findByIngredients', {
-        ingredients: Array.isArray(ingredients) ? ingredients.join(',') : ingredients,
-        number: options.limit || 10,
-        ranking: 1,
-        ignorePantry: true,
-      });
+      const ingredientList = Array.isArray(ingredients) ? ingredients.join(',') : ingredients;
 
-      const response = await axios.get(url);
+      if (this.useAws) {
+        // AWS endpoint: GET /recipes/search with ingredients param
+        const url = this.buildAwsURL('/recipes/search', {
+          ingredients: ingredientList,
+          number: options.limit || 10,
+          addRecipeInformation: true,
+          fillIngredients: true,
+        });
 
-      // Get full details for each recipe
-      const detailedRecipes = await Promise.all(
-        response.data.map((recipe: { id: number }) => this.getDetails(recipe.id))
-      );
+        const data = await this.request<{ results: SpoonacularRecipe[] }>(url);
+        return data.results || [];
+      } else {
+        // Vercel proxy: use findByIngredients endpoint
+        const url = this.buildVercelURL('/recipes/findByIngredients', {
+          ingredients: ingredientList,
+          number: options.limit || 10,
+          ranking: 1,
+          ignorePantry: true,
+        });
 
-      return detailedRecipes;
+        const response = await axios.get(url);
+
+        // Get full details for each recipe
+        const detailedRecipes = await Promise.all(
+          response.data.map((recipe: { id: number }) => this.getDetails(recipe.id))
+        );
+
+        return detailedRecipes;
+      }
     } catch (error) {
       this.handleError(error as AxiosError<ApiErrorResponse>);
       return [];
@@ -185,17 +205,23 @@ class SpoonacularProvider {
 
   /**
    * Get similar recipes
-   * Note: This endpoint still uses Vercel proxy as AWS Lambda doesn't have this endpoint yet
    */
   async getSimilar(recipeId: number | string, limit = 5): Promise<SpoonacularRecipe[]> {
     try {
-      // Always use Vercel proxy for this endpoint
-      const url = this.buildVercelURL(`/recipes/${recipeId}/similar`, {
-        number: limit,
-      });
+      let url: string;
+      if (this.useAws) {
+        // AWS endpoint: GET /recipes/{recipeId}/similar
+        url = this.buildAwsURL(`/recipes/${recipeId}/similar`, {
+          number: limit,
+        });
+      } else {
+        // Vercel proxy
+        url = this.buildVercelURL(`/recipes/${recipeId}/similar`, {
+          number: limit,
+        });
+      }
 
-      const response = await axios.get(url);
-      return response.data;
+      return await this.request<SpoonacularRecipe[]>(url);
     } catch (error) {
       this.handleError(error as AxiosError<ApiErrorResponse>);
       return [];
@@ -204,17 +230,23 @@ class SpoonacularProvider {
 
   /**
    * Get ingredient substitutes
-   * Note: This endpoint still uses Vercel proxy as AWS Lambda doesn't have this endpoint yet
    */
   async getSubstitutes(ingredient: string): Promise<{ substitutes: string[] } | null> {
     try {
-      // Always use Vercel proxy for this endpoint
-      const url = this.buildVercelURL('/food/ingredients/substitutes', {
-        ingredientName: ingredient,
-      });
+      let url: string;
+      if (this.useAws) {
+        // AWS endpoint: GET /food/ingredients/substitutes
+        url = this.buildAwsURL('/food/ingredients/substitutes', {
+          ingredientName: ingredient,
+        });
+      } else {
+        // Vercel proxy
+        url = this.buildVercelURL('/food/ingredients/substitutes', {
+          ingredientName: ingredient,
+        });
+      }
 
-      const response = await axios.get(url);
-      return response.data;
+      return await this.request<{ substitutes: string[] }>(url);
     } catch (error) {
       this.handleError(error as AxiosError<ApiErrorResponse>);
       return null;
