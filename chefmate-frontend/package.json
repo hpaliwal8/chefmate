@@ -6,6 +6,7 @@
   "dependencies": {
     "@aws-sdk/client-lex-runtime-v2": "^3.400.0",
     "@aws-sdk/client-polly": "^3.400.0",
+    "amazon-cognito-identity-js": "^6.3.16",
     "axios": "^1.5.0",
     "lucide-react": "^0.562.0",
     "react": "^18.2.0",

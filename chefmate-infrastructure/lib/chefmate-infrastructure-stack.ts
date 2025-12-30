@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -14,7 +16,56 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ChefmateStackProps) {
     super(scope, id, props);
 
-    // Common Lambda configuration
+    // ==================== DynamoDB Table ====================
+    const userDataTable = new dynamodb.Table(this, 'UserDataTable', {
+      tableName: 'ChefMateUserData',
+      partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST, // On-demand (free tier friendly)
+      removalPolicy: cdk.RemovalPolicy.RETAIN, // Don't delete data on stack destroy
+      pointInTimeRecovery: true, // Enable backups
+    });
+
+    // ==================== Cognito User Pool ====================
+    const userPool = new cognito.UserPool(this, 'ChefMateUserPool', {
+      userPoolName: 'chefmate-users',
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      autoVerify: {
+        email: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: false,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Cognito User Pool Client (for frontend)
+    const userPoolClient = new cognito.UserPoolClient(this, 'ChefMateUserPoolClient', {
+      userPool,
+      userPoolClientName: 'chefmate-frontend-client',
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
+      },
+      preventUserExistenceErrors: true,
+    });
+
+    // ==================== Lambda Configuration ====================
+    // Common Lambda configuration (for Spoonacular API functions)
     const lambdaConfig = {
       runtime: lambda.Runtime.NODEJS_18_X,
       architecture: lambda.Architecture.ARM_64,
@@ -22,6 +73,24 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         SPOONACULAR_API_KEY: props.spoonacularApiKey,
+        NODE_OPTIONS: '--enable-source-maps',
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: [],
+      },
+    };
+
+    // Lambda configuration for user data functions (DynamoDB access)
+    const userDataLambdaConfig = {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        DYNAMODB_TABLE_NAME: userDataTable.tableName,
         NODE_OPTIONS: '--enable-source-maps',
       },
       logRetention: logs.RetentionDays.ONE_WEEK,
@@ -57,17 +126,35 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       description: 'Generate meal plans from Spoonacular API',
     });
 
+    // ==================== User Data Lambda Functions ====================
     const userPreferencesLambda = new NodejsFunction(this, 'UserPreferencesFunction', {
-      ...lambdaConfig,
-      entry: path.join(__dirname, '../lambda/user-preferences/index.ts'),
+      ...userDataLambdaConfig,
+      entry: path.join(__dirname, '../lambda/user-data/preferences.ts'),
       handler: 'handler',
       functionName: 'chefmate-user-preferences',
-      description: 'Manage user preferences (Phase 2: DynamoDB)',
-      // Remove Spoonacular key - not needed for this Lambda
-      environment: {
-        NODE_OPTIONS: '--enable-source-maps',
-      },
+      description: 'Manage user preferences (DynamoDB)',
     });
+
+    const favoritesLambda = new NodejsFunction(this, 'FavoritesFunction', {
+      ...userDataLambdaConfig,
+      entry: path.join(__dirname, '../lambda/user-data/favorites.ts'),
+      handler: 'handler',
+      functionName: 'chefmate-favorites',
+      description: 'Manage user favorite recipes (DynamoDB)',
+    });
+
+    const shoppingListLambda = new NodejsFunction(this, 'ShoppingListFunction', {
+      ...userDataLambdaConfig,
+      entry: path.join(__dirname, '../lambda/user-data/shopping-list.ts'),
+      handler: 'handler',
+      functionName: 'chefmate-shopping-list',
+      description: 'Manage user shopping list (DynamoDB)',
+    });
+
+    // Grant DynamoDB permissions to user data Lambdas
+    userDataTable.grantReadWriteData(userPreferencesLambda);
+    userDataTable.grantReadWriteData(favoritesLambda);
+    userDataTable.grantReadWriteData(shoppingListLambda);
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'ChefmateApi', {
@@ -115,6 +202,13 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       stage: api.deploymentStage,
     });
 
+    // Cognito Authorizer for user data endpoints
+    const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+      cognitoUserPools: [userPool],
+      authorizerName: 'ChefMateCognitoAuthorizer',
+      identitySource: 'method.request.header.Authorization',
+    });
+
     // API Resources and Methods
     const recipesResource = api.root.addResource('recipes');
     const searchResource = recipesResource.addResource('search');
@@ -125,6 +219,9 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
 
     const userResource = api.root.addResource('user');
     const preferencesResource = userResource.addResource('preferences');
+    const favoritesResource = userResource.addResource('favorites');
+    const favoriteIdResource = favoritesResource.addResource('{recipeId}');
+    const shoppingListResource = userResource.addResource('shopping-list');
 
     // Recipe Search: GET /recipes/search
     searchResource.addMethod(
@@ -159,28 +256,83 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       }
     );
 
-    // User Preferences: GET/POST /user/preferences
+    // ==================== User Data Routes (Cognito Auth Required) ====================
+
+    // User Preferences: GET/PUT /user/preferences
     preferencesResource.addMethod(
       'GET',
-      new apigateway.LambdaIntegration(userPreferencesLambda, {
-        proxy: true,
-      }),
+      new apigateway.LambdaIntegration(userPreferencesLambda, { proxy: true }),
       {
         apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
       }
     );
 
     preferencesResource.addMethod(
-      'POST',
-      new apigateway.LambdaIntegration(userPreferencesLambda, {
-        proxy: true,
-      }),
+      'PUT',
+      new apigateway.LambdaIntegration(userPreferencesLambda, { proxy: true }),
       {
         apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
       }
     );
 
-    // Stack Outputs
+    // Favorites: GET/POST /user/favorites
+    favoritesResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(favoritesLambda, { proxy: true }),
+      {
+        apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    favoritesResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(favoritesLambda, { proxy: true }),
+      {
+        apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // Favorites: DELETE /user/favorites/{recipeId}
+    favoriteIdResource.addMethod(
+      'DELETE',
+      new apigateway.LambdaIntegration(favoritesLambda, { proxy: true }),
+      {
+        apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // Shopping List: GET/PUT /user/shopping-list
+    shoppingListResource.addMethod(
+      'GET',
+      new apigateway.LambdaIntegration(shoppingListLambda, { proxy: true }),
+      {
+        apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    shoppingListResource.addMethod(
+      'PUT',
+      new apigateway.LambdaIntegration(shoppingListLambda, { proxy: true }),
+      {
+        apiKeyRequired: true,
+        authorizer: cognitoAuthorizer,
+        authorizationType: apigateway.AuthorizationType.COGNITO,
+      }
+    );
+
+    // ==================== Stack Outputs ====================
     new cdk.CfnOutput(this, 'ApiEndpoint', {
       value: api.url,
       description: 'ChefMate API Gateway endpoint URL',
@@ -197,6 +349,26 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       value: apiKey.keyArn,
       description: 'API Key ARN',
       exportName: 'ChefmateApiKeyArn',
+    });
+
+    // Cognito Outputs
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+      description: 'Cognito User Pool ID',
+      exportName: 'ChefmateUserPoolId',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Cognito User Pool Client ID',
+      exportName: 'ChefmateUserPoolClientId',
+    });
+
+    // DynamoDB Output
+    new cdk.CfnOutput(this, 'DynamoDBTableName', {
+      value: userDataTable.tableName,
+      description: 'DynamoDB Table Name for user data',
+      exportName: 'ChefmateDynamoDBTable',
     });
   }
 }

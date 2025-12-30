@@ -61,6 +61,23 @@ export interface ShoppingListItem extends Ingredient {
   checked: boolean;
 }
 
+// For API compatibility
+export interface ShoppingItem {
+  id?: string;
+  name: string;
+  amount?: number;
+  unit?: string;
+  checked?: boolean;
+  recipeSource?: string;
+}
+
+// Auth Types
+export interface AuthUser {
+  username: string;
+  email: string;
+  userId: string;
+}
+
 // User Preferences Types
 export interface UserPreferences {
   diet: string | null;
@@ -78,6 +95,12 @@ export interface ConversationMessage {
 
 // Context Types
 export interface AppContextValue {
+  // Auth State
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  authError: string | null;
+
   // State
   recipes: Recipe[];
   currentRecipe: Recipe | null;
@@ -93,6 +116,7 @@ export interface AppContextValue {
   shoppingList: ShoppingListItem[];
   favorites: Recipe[];
   conversationHistory: ConversationMessage[];
+  isDataLoading: boolean;
 
   // Setters
   setRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>;
@@ -103,6 +127,12 @@ export interface AppContextValue {
   setIsSpeaking: React.Dispatch<React.SetStateAction<boolean>>;
   setTranscript: React.Dispatch<React.SetStateAction<string>>;
   setResponse: React.Dispatch<React.SetStateAction<string>>;
+
+  // Auth Actions
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  register: (email: string, password: string) => Promise<void>;
+  confirmRegistration: (email: string, code: string) => Promise<void>;
 
   // Actions
   addToShoppingList: (ingredients: Ingredient[]) => void;
