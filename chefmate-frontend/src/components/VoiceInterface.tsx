@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 import RecipeService from '../services/RecipeService';
+import Header from './Header';
 import RecipeList from './RecipeList';
 import CookingMode from './CookingMode';
 import ShoppingList from './ShoppingList';
@@ -425,10 +426,7 @@ const VoiceInterface: React.FC = () => {
 
   return (
     <div className="voice-interface fade-in">
-      <header className="header">
-        <h1>🍳 ChefMate</h1>
-        <p className="subtitle">Your Voice Cooking Assistant</p>
-      </header>
+      <Header />
 
       <div className="main-content">
         {/* Conversation Display */}

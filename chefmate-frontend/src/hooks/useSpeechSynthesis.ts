@@ -19,10 +19,16 @@ export const useSpeechSynthesis = (usePolly = false): UseSpeechSynthesisReturn =
   const [queue, setQueue] = useState<string[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  // Ref to hold the resume timer for Chrome bug workaround
+  const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
+      // Clear any running timer
+      if (resumeTimerRef.current) {
+        clearInterval(resumeTimerRef.current);
+      }
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -33,13 +39,23 @@ export const useSpeechSynthesis = (usePolly = false): UseSpeechSynthesisReturn =
     };
   }, []);
 
+  // Clear the resume timer
+  const clearResumeTimer = useCallback(() => {
+    if (resumeTimerRef.current) {
+      clearInterval(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+  }, []);
+
   /**
    * Speak text using browser's Web Speech API (fallback/simple mode)
+   * Includes workaround for Chrome bug that cancels long utterances
    */
   const speakBrowser = useCallback((text: string, options: SpeechOptions = {}) => {
     if (!text) return;
 
-    // Cancel any ongoing speech
+    // Cancel any ongoing speech and timer
+    clearResumeTimer();
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -60,26 +76,47 @@ export const useSpeechSynthesis = (usePolly = false): UseSpeechSynthesisReturn =
       utterance.voice = preferredVoice;
     }
 
+    // Chrome bug workaround: keep-alive timer to resume paused speech
+    // Chrome sometimes auto-pauses long utterances; this resumes them
+    const startResumeTimer = () => {
+      clearResumeTimer();
+      resumeTimerRef.current = setInterval(() => {
+        if (window.speechSynthesis.paused && !window.speechSynthesis.speaking) {
+          // Speech got stuck, try to resume
+          window.speechSynthesis.resume();
+        }
+      }, 250);
+    };
+
     utterance.onstart = () => {
       setIsSpeaking(true);
       console.log('Speech started');
+      startResumeTimer();
     };
 
     utterance.onend = () => {
+      clearResumeTimer();
       setIsSpeaking(false);
       console.log('Speech ended');
       if (options.onEnd) options.onEnd();
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech error:', event);
+      clearResumeTimer();
+      // Ignore 'canceled' errors - these happen when speech is intentionally stopped
+      // or when Chrome's buggy speech synthesis auto-cancels
+      if (event.error === 'canceled') {
+        console.log('Speech canceled');
+      } else {
+        console.error('Speech error:', event);
+        if (options.onError) options.onError(event);
+      }
       setIsSpeaking(false);
-      if (options.onError) options.onError(event);
     };
 
     window.speechSynthesis.speak(utterance);
     utteranceRef.current = utterance;
-  }, []);
+  }, [clearResumeTimer]);
 
   /**
    * Speak text using AWS Polly (better quality, but requires AWS setup)
@@ -117,6 +154,9 @@ export const useSpeechSynthesis = (usePolly = false): UseSpeechSynthesisReturn =
   );
 
   const stop = useCallback(() => {
+    // Clear resume timer
+    clearResumeTimer();
+
     // Stop browser speech
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
@@ -130,7 +170,7 @@ export const useSpeechSynthesis = (usePolly = false): UseSpeechSynthesisReturn =
 
     setIsSpeaking(false);
     setQueue([]);
-  }, []);
+  }, [clearResumeTimer]);
 
   const pause = useCallback(() => {
     if (window.speechSynthesis.speaking) {
