@@ -10,59 +10,95 @@ A complete, production-ready React frontend for ChefMate - a voice-controlled co
 - ✅ Responsive, modern UI
 - ✅ Real-time user interaction
 - ✅ Modular, scalable architecture
+- ✅ **AWS Lambda backend** (Phase 1)
+- ✅ **AWS Cognito authentication** (Phase 2)
+- ✅ **DynamoDB persistent storage** (Phase 2)
 
 ## 📦 Complete File Structure
 
 ```
-chefmate-frontend/
-├── src/
-│   ├── components/
-│   │   ├── VoiceInterface.jsx      ✅ Main voice interface
-│   │   ├── RecipeCard.jsx          ✅ Individual recipe display
-│   │   ├── RecipeList.jsx          ✅ Grid of recipes
-│   │   ├── CookingMode.jsx         ✅ Step-by-step cooking
-│   │   └── ShoppingList.jsx        ✅ Shopping list management
-│   ├── context/
-│   │   └── AppContext.js           ✅ Global state management
-│   ├── services/
-│   │   ├── RecipeService.js        ✅ Data abstraction layer
-│   │   └── SpoonacularProvider.js  ✅ API integration
-│   ├── hooks/
-│   │   ├── useVoiceRecording.js    ✅ Voice input hook
-│   │   └── useSpeechSynthesis.js   ✅ Voice output hook
-│   ├── styles/
-│   │   ├── App.css                 ✅ Global styles
-│   │   ├── VoiceInterface.css      ✅ Main interface styles
-│   │   ├── RecipeCard.css          ✅ Recipe card styles
-│   │   ├── RecipeList.css          ✅ Recipe list styles
-│   │   ├── CookingMode.css         ✅ Cooking mode styles
-│   │   └── ShoppingList.css        ✅ Shopping list styles
-│   ├── App.jsx                     ✅ Main app component
-│   └── index.js                    ✅ Entry point
-├── .env.example                    ✅ Environment template
-├── package.json                    ✅ Dependencies
-├── README.md                       ✅ Full documentation
-├── QUICKSTART.md                   ✅ Quick start guide
-└── PROJECT_STRUCTURE.md            ✅ Architecture overview
+chefmate/
+├── chefmate-frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── VoiceInterface.tsx      ✅ Main voice interface
+│   │   │   ├── RecipeCard.tsx          ✅ Individual recipe display
+│   │   │   ├── RecipeList.tsx          ✅ Grid of recipes
+│   │   │   ├── CookingMode.tsx         ✅ Step-by-step cooking
+│   │   │   ├── ShoppingList.tsx        ✅ Shopping list management
+│   │   │   └── AuthModal.tsx           ✅ Sign in/Sign up UI (Phase 2)
+│   │   ├── context/
+│   │   │   └── AppContext.tsx          ✅ Global state + auth integration
+│   │   ├── services/
+│   │   │   ├── RecipeService.ts        ✅ Data abstraction layer
+│   │   │   ├── SpoonacularProvider.ts  ✅ API integration (AWS/Vercel)
+│   │   │   ├── ApiConfig.ts            ✅ AWS API Gateway config
+│   │   │   ├── AuthService.ts          ✅ Cognito authentication (Phase 2)
+│   │   │   └── UserDataService.ts      ✅ User data API calls (Phase 2)
+│   │   ├── hooks/
+│   │   │   ├── useVoiceRecording.ts    ✅ Voice input hook
+│   │   │   └── useSpeechSynthesis.ts   ✅ Voice output hook
+│   │   ├── styles/
+│   │   │   ├── App.css                 ✅ Global styles (NYT Editorial)
+│   │   │   ├── VoiceInterface.css      ✅ Main interface styles
+│   │   │   ├── RecipeCard.css          ✅ Recipe card styles
+│   │   │   ├── RecipeList.css          ✅ Recipe list styles
+│   │   │   ├── CookingMode.css         ✅ Cooking mode styles
+│   │   │   └── ShoppingList.css        ✅ Shopping list styles
+│   │   ├── types/
+│   │   │   └── index.ts                ✅ TypeScript type definitions
+│   │   ├── App.tsx                     ✅ Main app component
+│   │   └── index.tsx                   ✅ Entry point
+│   ├── .env.local                      ✅ Environment variables
+│   └── package.json                    ✅ Dependencies
+│
+└── chefmate-infrastructure/            ✅ AWS CDK Infrastructure (Phase 1-2)
+    ├── lib/
+    │   └── chefmate-infrastructure-stack.ts  ✅ CDK stack definition
+    ├── lambda/
+    │   ├── shared/
+    │   │   ├── spoonacular-client.ts   ✅ Spoonacular API client
+    │   │   ├── response-utils.ts       ✅ Lambda response helpers
+    │   │   └── dynamodb-client.ts      ✅ DynamoDB utilities (Phase 2)
+    │   ├── recipe-search/index.ts      ✅ Recipe search Lambda
+    │   ├── recipe-details/index.ts     ✅ Recipe details Lambda
+    │   ├── meal-planner/index.ts       ✅ Meal plan Lambda
+    │   ├── similar-recipes/index.ts    ✅ Similar recipes Lambda
+    │   ├── ingredient-substitutes/index.ts ✅ Substitutes Lambda
+    │   └── user-data/                  ✅ User data Lambdas (Phase 2)
+    │       ├── favorites.ts            ✅ Favorites CRUD
+    │       ├── preferences.ts          ✅ Preferences CRUD
+    │       └── shopping-list.ts        ✅ Shopping list CRUD
+    ├── bin/
+    │   └── chefmate-infrastructure.ts  ✅ CDK app entry point
+    └── cdk.json                        ✅ CDK configuration
 ```
 
 ## 🚀 How to Run
 
 ### Prerequisites
-- Node.js installed
-- Spoonacular API key (free tier)
+- Node.js 18+ installed
+- AWS CLI configured (for CDK deployment)
+- Spoonacular API key (free tier: 150 requests/day)
 
-### Setup Steps
+### Frontend Setup
 
 1. **Install dependencies:**
    ```bash
+   cd chefmate-frontend
    npm install
    ```
 
 2. **Configure environment:**
    ```bash
-   cp .env.example .env
-   # Edit .env and add your Spoonacular API key
+   # Edit .env.local with your values:
+   REACT_APP_SPOONACULAR_API_KEY=your_key
+   REACT_APP_USE_AWS_BACKEND=true
+   REACT_APP_AWS_API_ENDPOINT=https://xxx.execute-api.us-east-2.amazonaws.com/prod/
+   REACT_APP_AWS_API_KEY=your_api_gateway_key
+   REACT_APP_COGNITO_USER_POOL_ID=us-east-2_xxxxx
+   REACT_APP_COGNITO_CLIENT_ID=xxxxx
+   REACT_APP_AWS_REGION=us-east-2
    ```
 
 3. **Start development server:**
@@ -74,6 +110,25 @@ chefmate-frontend/
    ```bash
    npm run build
    ```
+
+### AWS Infrastructure Setup (CDK)
+
+1. **Install CDK dependencies:**
+   ```bash
+   cd chefmate-infrastructure
+   npm install
+   ```
+
+2. **Deploy to AWS:**
+   ```bash
+   npx cdk deploy --context spoonacularApiKey=YOUR_SPOONACULAR_KEY
+   ```
+
+3. **Get API Gateway values from outputs:**
+   - Copy `ApiEndpoint` to `REACT_APP_AWS_API_ENDPOINT`
+   - Run: `aws apigateway get-api-key --api-key API_KEY_ID --include-value` for API key
+   - Copy `UserPoolId` to `REACT_APP_COGNITO_USER_POOL_ID`
+   - Copy `UserPoolClientId` to `REACT_APP_COGNITO_CLIENT_ID`
 
 ## 🎯 Key Features Implemented
 
@@ -99,7 +154,7 @@ chefmate-frontend/
 - Auto-generate from recipes
 - Check off items
 - Sort by name or aisle
-- Persistent storage (localStorage)
+- Persistent storage (DynamoDB when authenticated, localStorage fallback)
 
 ### 5. User Experience
 - Favorites system
@@ -114,7 +169,7 @@ chefmate-frontend/
 ```javascript
 // Easy to swap or add providers (Edamam, MealDB, etc.)
 RecipeService
-  ├── SpoonacularProvider
+  ├── SpoonacularProvider (AWS Lambda or Vercel)
   ├── EdamamProvider (future)
   └── MealDBProvider (future)
 ```
@@ -125,8 +180,9 @@ AppContext provides:
 - recipes, currentRecipe
 - shoppingList, favorites
 - userPreferences
+- user (authenticated user from Cognito)
 - voice states
-- All CRUD operations
+- All CRUD operations (synced to DynamoDB when authenticated)
 ```
 
 ### Custom Hooks
@@ -139,6 +195,7 @@ useSpeechSynthesis()   // Voice output abstraction
 ```
 App
 └── AppProvider (context)
+    ├── AuthModal (sign in/up)
     └── VoiceInterface
         ├── RecipeList
         │   └── RecipeCard[]
@@ -146,8 +203,96 @@ App
         └── ShoppingList
 ```
 
+## ☁️ AWS Infrastructure Architecture (Phase 1-2)
+
+### Overview
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              AWS Cloud                                   │
+│  ┌──────────────┐    ┌───────────────────────────────────────────────┐ │
+│  │   Cognito    │    │              API Gateway                       │ │
+│  │  User Pool   │────│  - API Key authentication (public endpoints)   │ │
+│  │              │    │  - Cognito authorizer (user data endpoints)    │ │
+│  └──────────────┘    └───────────────────────────────────────────────┘ │
+│                                      │                                   │
+│         ┌────────────────────────────┼─────────────────────────────┐    │
+│         │                            │                             │    │
+│         ▼                            ▼                             ▼    │
+│  ┌─────────────┐   ┌─────────────────────────────┐   ┌─────────────┐   │
+│  │Recipe Search│   │     User Data Lambdas       │   │  DynamoDB   │   │
+│  │Recipe Detail│   │  - favorites.ts             │◄──│  UserData   │   │
+│  │Meal Planner │   │  - preferences.ts           │   │   Table     │   │
+│  │Similar      │   │  - shopping-list.ts         │   │ (PK/SK)     │   │
+│  │Substitutes  │   └─────────────────────────────┘   └─────────────┘   │
+│  └──────┬──────┘                                                        │
+│         │                                                               │
+│         ▼                                                               │
+│  ┌─────────────┐                                                        │
+│  │ Spoonacular │                                                        │
+│  │     API     │                                                        │
+│  └─────────────┘                                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/recipes/search` | GET | API Key | Search recipes |
+| `/recipes/{id}` | GET | API Key | Get recipe details |
+| `/recipes/{id}/similar` | GET | API Key | Get similar recipes |
+| `/meal-plan/generate` | GET | API Key | Generate meal plan |
+| `/food/ingredients/substitutes` | GET | API Key | Get ingredient substitutes |
+| `/user/favorites` | GET/POST | Cognito | User favorites |
+| `/user/favorites/{id}` | DELETE | Cognito | Remove favorite |
+| `/user/preferences` | GET/PUT | Cognito | User preferences |
+| `/user/shopping-list` | GET/PUT | Cognito | Shopping list |
+
+### DynamoDB Single-Table Design
+
+```
+Table: ChefMateUserData
+├── Partition Key (PK): string  - e.g., "USER#<userId>"
+└── Sort Key (SK): string       - e.g., "PREFERENCES", "FAVORITE#<recipeId>"
+
+┌─────────────────┬───────────────────────┬────────────────────────────────┐
+│ PK              │ SK                    │ Attributes                     │
+├─────────────────┼───────────────────────┼────────────────────────────────┤
+│ USER#abc123     │ PREFERENCES           │ diet, allergens, cuisines, ... │
+│ USER#abc123     │ FAVORITE#654959       │ recipeId, title, image, ...    │
+│ USER#abc123     │ FAVORITE#716429       │ recipeId, title, image, ...    │
+│ USER#abc123     │ SHOPPING_LIST         │ items[], updatedAt             │
+└─────────────────┴───────────────────────┴────────────────────────────────┘
+```
+
+### Authentication Flow
+
+```
+1. User clicks "Sign In" → AuthModal opens
+2. User enters email/password
+3. AuthService.signIn() → Cognito authenticates
+4. JWT tokens stored in browser (managed by Cognito SDK)
+5. API calls include Authorization header with JWT
+6. API Gateway validates token with Cognito authorizer
+7. Lambda extracts userId from JWT claims
+8. DynamoDB operations use userId for data isolation
+```
+
+### Key Architectural Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Single-table DynamoDB** | Efficient queries, lower costs, simple access patterns |
+| **Cognito User Pools** | Managed auth, free tier (50K MAU), JWT tokens |
+| **API Key + Cognito auth** | Public endpoints rate-limited, user data protected |
+| **Lambda per endpoint** | Independent scaling, isolated failures |
+| **CDK for IaC** | Type-safe, version controlled, reproducible |
+| **Lazy Cognito init** | App works without auth configured |
+| **localStorage fallback** | Graceful degradation for unauthenticated users |
+
 ## 💾 Data Flow
 
+### Recipe Search Flow
 ```
 User Voice → Web Speech API → VoiceInterface
     ↓
@@ -157,7 +302,13 @@ RecipeService.searchRecipes()
     ↓
 SpoonacularProvider.search()
     ↓
-Spoonacular API
+┌─────────────────────────────────────┐
+│  AWS Backend (REACT_APP_USE_AWS_BACKEND=true)
+│  API Gateway → Lambda → Spoonacular API
+├─────────────────────────────────────┤
+│  Vercel Fallback
+│  /api/spoonacular → Spoonacular API
+└─────────────────────────────────────┘
     ↓
 Normalize Data
     ↓
@@ -166,6 +317,25 @@ Update Context State
 Re-render Components
     ↓
 Speak Response (Text-to-Speech)
+```
+
+### User Data Flow (Authenticated)
+```
+User Action (add favorite, update preferences)
+    ↓
+AppContext dispatch
+    ↓
+UserDataService API call
+    ↓
+API Gateway (with JWT Authorization header)
+    ↓
+Cognito Authorizer validates token
+    ↓
+Lambda extracts userId from claims
+    ↓
+DynamoDB read/write with PK=USER#userId
+    ↓
+Update local state on success
 ```
 
 ## 🎨 Styling Approach
@@ -189,20 +359,36 @@ Speak Response (Text-to-Speech)
 
 ## 🚀 Deployment Ready
 
-### Netlify
+### AWS Infrastructure (CDK)
 ```bash
+cd chefmate-infrastructure
+npx cdk deploy --context spoonacularApiKey=YOUR_KEY
+```
+
+### Frontend - Vercel
+```bash
+cd chefmate-frontend
+vercel --prod
+```
+
+### Frontend - Netlify
+```bash
+cd chefmate-frontend
 npm run build
 netlify deploy --prod
 ```
 
-### Vercel
-```bash
-vercel --prod
+### Environment Variables (Production)
+Set in deployment platform (Vercel/Netlify):
 ```
-
-### Environment Variables
-Set in deployment platform:
-- `REACT_APP_SPOONACULAR_API_KEY`
+REACT_APP_SPOONACULAR_API_KEY=xxx
+REACT_APP_USE_AWS_BACKEND=true
+REACT_APP_AWS_API_ENDPOINT=https://xxx.execute-api.us-east-2.amazonaws.com/prod/
+REACT_APP_AWS_API_KEY=xxx
+REACT_APP_COGNITO_USER_POOL_ID=us-east-2_xxx
+REACT_APP_COGNITO_CLIENT_ID=xxx
+REACT_APP_AWS_REGION=us-east-2
+```
 
 ## 📊 Performance Considerations
 
@@ -211,16 +397,24 @@ Set in deployment platform:
 - **Debouncing** - Can add for search input
 - **Caching** - Can add for API responses (not implemented in frontend, but ready in service layer)
 
-## 🔄 Future Enhancements (Easy to Add)
+## 🔄 Implementation Progress
 
-1. **Add Edamam API** - Just create `EdamamProvider.js`
-2. **User Authentication** - Add Firebase or Auth0
-3. **Recipe Rating** - Extend RecipeCard component
-4. **Meal Planning** - New component using context
-5. **Nutrition Tracking** - Use existing nutrition data
-6. **Social Sharing** - Add share buttons
-7. **PWA Features** - Add service worker
-8. **Offline Mode** - Cache recipes in IndexedDB
+### Completed
+- ✅ **Phase 1: AWS Lambda Migration** - All Spoonacular endpoints migrated
+- ✅ **Phase 2: DynamoDB + Cognito** - User auth and persistent storage
+- ✅ Recipe search, details, similar, substitutes via Lambda
+- ✅ Meal plan generation via Lambda
+- ✅ User favorites, preferences, shopping list in DynamoDB
+- ✅ Cognito sign up, sign in, password reset
+- ✅ JWT-based API authorization
+
+### Future Enhancements
+1. **Add Edamam API** - Create `EdamamProvider.ts`
+2. **Recipe Rating** - Extend RecipeCard component
+3. **Social Sharing** - Add share buttons
+4. **PWA Features** - Add service worker
+5. **Offline Mode** - Cache recipes in IndexedDB
+6. **Phase 3: AWS Lex + Polly** - Natural language understanding
 
 ## 💡 What Makes This Portfolio-Worthy
 
@@ -236,30 +430,40 @@ Set in deployment platform:
 ## 📈 Skills Demonstrated
 
 **Frontend:**
-- React.js (hooks, context, components)
-- JavaScript ES6+
-- CSS3 (flexbox, grid, animations)
-- Responsive design
+- React.js (hooks, context, functional components)
+- TypeScript
+- CSS3 (flexbox, grid, animations, CSS variables)
+- Responsive design (mobile-first)
 - Web APIs (Speech Recognition, Speech Synthesis)
 
-**Backend Integration:**
-- RESTful API consumption
+**Backend/Cloud (AWS):**
+- AWS Lambda (Node.js 18, TypeScript)
+- API Gateway (REST API, API keys, Cognito authorizer)
+- DynamoDB (single-table design, PK/SK patterns)
+- Cognito User Pools (authentication, JWT tokens)
+- AWS CDK (Infrastructure as Code)
+
+**API Integration:**
+- RESTful API design and consumption
 - Async/await, Promises
-- Error handling
-- Environment configuration
+- Error handling and retry logic
+- Environment-based configuration
+- API key and JWT authentication
 
 **Software Engineering:**
 - Service layer pattern
 - Separation of concerns
 - DRY principle
 - Modular architecture
+- TypeScript for type safety
 - Documentation
 
 **User Experience:**
 - Voice interface design
-- Loading states
+- Loading states and skeleton UI
 - Error messaging
-- Accessibility considerations
+- Authentication flows
+- Graceful degradation (localStorage fallback)
 - Mobile-first design
 
 ## 🎓 Learning Resources Used
@@ -276,6 +480,8 @@ Before deployment, test:
 - [ ] Voice input on Chrome/Edge
 - [ ] Text input fallback
 - [ ] Recipe search with various queries
+- [ ] Recipe details and similar recipes
+- [ ] Ingredient substitutes lookup
 - [ ] Cooking mode navigation
 - [ ] Shopping list operations
 - [ ] Favorites functionality
@@ -284,33 +490,53 @@ Before deployment, test:
 - [ ] Loading states
 - [ ] Browser compatibility
 
+### AWS-Specific Testing
+- [ ] Sign up with email verification
+- [ ] Sign in and sign out
+- [ ] Forgot password flow
+- [ ] Favorites sync to DynamoDB
+- [ ] Preferences sync to DynamoDB
+- [ ] Shopping list sync to DynamoDB
+- [ ] API Key authentication (public endpoints)
+- [ ] JWT authentication (user data endpoints)
+- [ ] Unauthenticated fallback to localStorage
+
 ## 🎯 Next Steps
 
-1. **Get it Running:**
-   - Follow QUICKSTART.md
-   - Test all features
-   - Try voice commands
+1. **Deploy AWS Infrastructure:**
+   ```bash
+   cd chefmate-infrastructure
+   npx cdk deploy --context spoonacularApiKey=YOUR_KEY
+   ```
 
-2. **Customize:**
-   - Change colors/styling
-   - Add your own features
-   - Experiment with voice commands
+2. **Update Frontend Environment:**
+   - Copy CDK output values to `.env.local` or Vercel environment
 
-3. **Deploy:**
-   - Choose hosting platform
-   - Set environment variables
-   - Share with others!
+3. **Deploy Frontend:**
+   ```bash
+   cd chefmate-frontend
+   vercel --prod
+   ```
 
-4. **Extend (Optional):**
-   - Add AWS Lex integration
-   - Implement backend with Node.js/Lambda
-   - Add authentication
-   - Create mobile app version
+4. **Test Everything:**
+   - Sign up and verify email
+   - Search recipes, add favorites
+   - Check data persists after sign out/in
+
+5. **Future Extensions:**
+   - AWS Lex for natural language understanding
+   - AWS Polly for more natural voice output
+   - Recipe rating and reviews
+   - Social sharing features
 
 ---
 
-**You now have a complete, professional-grade React application ready to showcase!**
+**You now have a complete, production-grade full-stack application!**
 
-Total Implementation: ~3,000+ lines of code across 20+ files
-Estimated Build Time: 10-15 hours for an experienced developer
-Your Build Time: ~2 hours with this starter code! 🚀
+| Metric | Value |
+|--------|-------|
+| Frontend Lines of Code | ~5,000+ |
+| Lambda Functions | 8 |
+| AWS Services Used | 4 (Lambda, API Gateway, DynamoDB, Cognito) |
+| API Endpoints | 9 |
+| Total Files | 40+ |
