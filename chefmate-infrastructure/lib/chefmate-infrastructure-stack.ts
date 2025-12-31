@@ -4,9 +4,11 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { ChefMateLexBot } from './lex-bot-construct';
 
 interface ChefmateStackProps extends cdk.StackProps {
   spoonacularApiKey: string;
@@ -172,6 +174,44 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
     userDataTable.grantReadWriteData(favoritesLambda);
     userDataTable.grantReadWriteData(shoppingListLambda);
 
+    // ==================== AWS Lex Bot ====================
+    const lexBot = new ChefMateLexBot(this, 'ChefMateLexBot', {
+      botName: 'ChefMateBot',
+    });
+
+    // Lex Proxy Lambda
+    const lexProxyLambda = new NodejsFunction(this, 'LexProxyFunction', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(30),
+      entry: path.join(__dirname, '../lambda/lex-proxy/index.ts'),
+      handler: 'handler',
+      functionName: 'chefmate-lex-proxy',
+      description: 'Proxy requests to AWS Lex for intent recognition',
+      environment: {
+        LEX_BOT_ID: lexBot.botId,
+        LEX_BOT_ALIAS_ID: lexBot.botAliasId,
+        NODE_OPTIONS: '--enable-source-maps',
+      },
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: [],
+      },
+    });
+
+    // Grant Lex permissions to the proxy Lambda
+    lexProxyLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['lex:RecognizeText', 'lex:RecognizeUtterance'],
+        resources: [
+          `arn:aws:lex:${this.region}:${this.account}:bot-alias/${lexBot.botId}/${lexBot.botAliasId}`,
+        ],
+      })
+    );
+
     // API Gateway
     const api = new apigateway.RestApi(this, 'ChefmateApi', {
       restApiName: 'ChefMate API',
@@ -247,6 +287,10 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
     const favoriteIdResource = favoritesResource.addResource('{recipeId}');
     const shoppingListResource = userResource.addResource('shopping-list');
 
+    // Lex resource: /lex/recognize
+    const lexResource = api.root.addResource('lex');
+    const recognizeResource = lexResource.addResource('recognize');
+
     // Recipe Search: GET /recipes/search
     searchResource.addMethod(
       'GET',
@@ -295,6 +339,19 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
     substitutesResource.addMethod(
       'GET',
       new apigateway.LambdaIntegration(ingredientSubstitutesLambda, {
+        proxy: true,
+      }),
+      {
+        apiKeyRequired: true,
+      }
+    );
+
+    // ==================== Lex Routes ====================
+
+    // Lex Recognize: POST /lex/recognize
+    recognizeResource.addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(lexProxyLambda, {
         proxy: true,
       }),
       {
@@ -415,6 +472,19 @@ export class ChefmateInfrastructureStack extends cdk.Stack {
       value: userDataTable.tableName,
       description: 'DynamoDB Table Name for user data',
       exportName: 'ChefmateDynamoDBTable',
+    });
+
+    // Lex Bot Outputs
+    new cdk.CfnOutput(this, 'LexBotId', {
+      value: lexBot.botId,
+      description: 'Lex Bot ID',
+      exportName: 'ChefmateLexBotId',
+    });
+
+    new cdk.CfnOutput(this, 'LexBotAliasId', {
+      value: lexBot.botAliasId,
+      description: 'Lex Bot Alias ID',
+      exportName: 'ChefmateLexBotAliasId',
     });
   }
 }

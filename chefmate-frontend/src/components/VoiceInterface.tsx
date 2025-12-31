@@ -4,6 +4,14 @@ import { useAppContext } from '../context/AppContext';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 import RecipeService from '../services/RecipeService';
+import LexService, { LexResponse } from '../services/LexService';
+import {
+  convertOrdinalToNumber,
+  parseIngredientsSlot,
+  normalizeDietType,
+  normalizeCuisineType,
+  parseMaxTime,
+} from '../utils/lexHelpers';
 import Header from './Header';
 import RecipeList from './RecipeList';
 import CookingMode from './CookingMode';
@@ -25,8 +33,14 @@ const VoiceInterface: React.FC = () => {
     isLoading,
     setIsLoading,
     cookingMode,
+    currentStep,
+    startCooking,
+    nextStep,
+    previousStep,
     userPreferences,
     addToConversation,
+    addToFavorites,
+    addToShoppingList,
   } = useAppContext();
 
   const [textInput, setTextInput] = useState('');
@@ -287,6 +301,212 @@ const VoiceInterface: React.FC = () => {
     setShowSuggestions(true);
   }, [addAssistantMessage]);
 
+  // Handle next step intent (for cooking mode)
+  const handleNextStepIntent = useCallback(() => {
+    if (!cookingMode || !currentRecipe) {
+      addAssistantMessage('You need to start cooking a recipe first. Would you like to find a recipe?');
+      return;
+    }
+
+    const totalSteps = currentRecipe.instructions.length;
+    if (currentStep >= totalSteps - 1) {
+      addAssistantMessage("That's the last step! You've completed the recipe. Enjoy your meal!");
+      return;
+    }
+
+    nextStep();
+    const nextStepNumber = currentStep + 2; // +2 because currentStep is 0-indexed and we're moving to next
+    const stepInstruction = currentRecipe.instructions[currentStep + 1]?.step || '';
+    addAssistantMessage(`Step ${nextStepNumber}: ${stepInstruction}`);
+  }, [addAssistantMessage, cookingMode, currentRecipe, currentStep, nextStep]);
+
+  // Handle previous step intent (for cooking mode)
+  const handlePreviousStepIntent = useCallback(() => {
+    if (!cookingMode || !currentRecipe) {
+      addAssistantMessage('You need to start cooking a recipe first. Would you like to find a recipe?');
+      return;
+    }
+
+    if (currentStep <= 0) {
+      const stepInstruction = currentRecipe.instructions[0]?.step || '';
+      addAssistantMessage(`This is the first step. Step 1: ${stepInstruction}`);
+      return;
+    }
+
+    previousStep();
+    const prevStepNumber = currentStep; // currentStep is 0-indexed, so this is the display number after going back
+    const stepInstruction = currentRecipe.instructions[currentStep - 1]?.step || '';
+    addAssistantMessage(`Going back. Step ${prevStepNumber}: ${stepInstruction}`);
+  }, [addAssistantMessage, cookingMode, currentRecipe, currentStep, previousStep]);
+
+  // Handle add to shopping list intent
+  const handleAddToShoppingListIntent = useCallback(() => {
+    if (!currentRecipe) {
+      addAssistantMessage('Please select a recipe first to add its ingredients to your shopping list.');
+      return;
+    }
+
+    const ingredients = currentRecipe.ingredients || [];
+    if (ingredients.length === 0) {
+      addAssistantMessage("This recipe doesn't have any ingredients to add.");
+      return;
+    }
+
+    addToShoppingList(ingredients);
+    addAssistantMessage(
+      `I've added ${ingredients.length} ingredients from ${currentRecipe.title} to your shopping list.`
+    );
+  }, [addAssistantMessage, addToShoppingList, currentRecipe]);
+
+  // Handle add to favorites intent
+  const handleAddToFavoritesIntent = useCallback(() => {
+    if (!currentRecipe) {
+      addAssistantMessage('Please select a recipe first to save it to your favorites.');
+      return;
+    }
+
+    addToFavorites(currentRecipe);
+    addAssistantMessage(`I've saved ${currentRecipe.title} to your favorites!`);
+  }, [addAssistantMessage, addToFavorites, currentRecipe]);
+
+  // Handle get substitute intent
+  const handleGetSubstituteIntent = useCallback(
+    async (ingredient: string) => {
+      if (!ingredient) {
+        addAssistantMessage('Which ingredient do you need a substitute for?');
+        return;
+      }
+
+      try {
+        const result = await RecipeService.getSubstitutes(ingredient);
+        if (!result || result.substitutes.length === 0) {
+          addAssistantMessage(`Sorry, I couldn't find any substitutes for ${ingredient}.`);
+        } else {
+          addAssistantMessage(
+            `For ${ingredient}, you can use: ${result.substitutes.slice(0, 3).join(', ')}.`
+          );
+        }
+      } catch {
+        addAssistantMessage(`Sorry, I had trouble finding substitutes for ${ingredient}.`);
+      }
+    },
+    [addAssistantMessage]
+  );
+
+  // Handle help intent
+  const handleHelpIntent = useCallback(() => {
+    addAssistantMessage(
+      "I can help you with: finding recipes by dish, cuisine, or diet; " +
+      "searching by ingredients you have; getting recipe details; " +
+      "walking you through cooking steps; saving favorites; " +
+      "and adding ingredients to your shopping list. What would you like to do?"
+    );
+  }, [addAssistantMessage]);
+
+  // Process query using Lex
+  const processQueryWithLex = useCallback(
+    async (query: string, lexResponse: LexResponse) => {
+      const intent = lexResponse.intent;
+
+      // Update Lex session with current context
+      if (currentRecipe) {
+        LexService.setSessionAttribute('currentRecipeId', String(currentRecipe.id));
+      }
+      if (recipes.length > 0) {
+        LexService.setSessionAttribute('recipeIds', recipes.map(r => r.id).join(','));
+      }
+
+      switch (intent) {
+        case 'SearchRecipe': {
+          const params = {
+            query: LexService.getSlotValue(lexResponse, 'dish') || query,
+            diet: normalizeDietType(LexService.getSlotValue(lexResponse, 'diet')),
+            cuisine: normalizeCuisineType(LexService.getSlotValue(lexResponse, 'cuisine')),
+            maxTime: parseMaxTime(LexService.getSlotValue(lexResponse, 'maxTime')),
+          };
+          await handleSearchIntent(query, params);
+          break;
+        }
+
+        case 'GetRecipeDetails': {
+          const ordinal = LexService.getSlotValue(lexResponse, 'ordinal');
+          const recipeNumber = convertOrdinalToNumber(ordinal);
+          handleDetailsIntent({ recipeNumber });
+          break;
+        }
+
+        case 'SearchByIngredients': {
+          const ingredientsSlot = LexService.getSlotValue(lexResponse, 'ingredients');
+          const ingredients = parseIngredientsSlot(ingredientsSlot);
+          await handleIngredientsSearch({ ingredients });
+          break;
+        }
+
+        case 'StartCooking':
+          if (currentRecipe) {
+            startCooking(currentRecipe);
+            addAssistantMessage(
+              `Starting ${currentRecipe.title}. Step 1: ${currentRecipe.instructions[0]?.step || 'Get your ingredients ready.'}`
+            );
+          } else {
+            handleCookingIntent();
+          }
+          break;
+
+        case 'NextStep':
+          handleNextStepIntent();
+          break;
+
+        case 'PreviousStep':
+          handlePreviousStepIntent();
+          break;
+
+        case 'AddToShoppingList':
+          handleAddToShoppingListIntent();
+          break;
+
+        case 'AddToFavorites':
+          handleAddToFavoritesIntent();
+          break;
+
+        case 'GetSubstitute': {
+          const ingredient = LexService.getSlotValue(lexResponse, 'ingredient');
+          if (ingredient) {
+            await handleGetSubstituteIntent(ingredient);
+          } else {
+            addAssistantMessage('Which ingredient do you need a substitute for?');
+          }
+          break;
+        }
+
+        case 'Help':
+          handleHelpIntent();
+          break;
+
+        case 'FallbackIntent':
+        default:
+          handleGeneralQuery();
+      }
+    },
+    [
+      addAssistantMessage,
+      currentRecipe,
+      handleAddToFavoritesIntent,
+      handleAddToShoppingListIntent,
+      handleCookingIntent,
+      handleDetailsIntent,
+      handleGeneralQuery,
+      handleGetSubstituteIntent,
+      handleHelpIntent,
+      handleIngredientsSearch,
+      handleNextStepIntent,
+      handlePreviousStepIntent,
+      handleSearchIntent,
+      recipes,
+      startCooking,
+    ]
+  );
+
   // Process user query
   const processQuery = useCallback(
     async (query: string) => {
@@ -295,7 +515,19 @@ const VoiceInterface: React.FC = () => {
       setShowSuggestions(false);
 
       try {
-        // Simple intent classification
+        // Try Lex first if enabled
+        if (LexService.isLexEnabled()) {
+          try {
+            const lexResponse = await LexService.recognizeText(query);
+            await processQueryWithLex(query, lexResponse);
+            return;
+          } catch (lexError) {
+            console.warn('Lex processing failed, falling back to regex:', lexError);
+            // Fall through to regex-based classification
+          }
+        }
+
+        // Fallback: Simple regex-based intent classification
         const intent = classifyIntent(query.toLowerCase());
 
         switch (intent.type) {
@@ -334,6 +566,7 @@ const VoiceInterface: React.FC = () => {
       handleGeneralQuery,
       handleIngredientsSearch,
       handleSearchIntent,
+      processQueryWithLex,
       setIsLoading,
     ]
   );

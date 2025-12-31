@@ -23,6 +23,7 @@
     "@aws-cdk/aws-apigateway": "^1.203.0",
     "@aws-cdk/aws-lambda-nodejs": "^1.203.0",
     "@aws-sdk/client-dynamodb": "^3.400.0",
+    "@aws-sdk/client-lex-runtime-v2": "^3.958.0",
     "@aws-sdk/lib-dynamodb": "^3.400.0",
     "@types/aws-lambda": "^8.10.159",
     "aws-cdk-lib": "2.232.1",
