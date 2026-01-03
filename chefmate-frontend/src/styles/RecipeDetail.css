@@ -1,0 +1,788 @@
+/* Layout / base */
+.recipe-detail {
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 20px;
+  color: #222;
+  background: var(--bg, #fff);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(30, 40, 50, 0.06);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.recipe-detail > button {
+  background: transparent;
+  border: none;
+  color: var(--primary-color, #ff6b35);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+/* Header */
+.detail-header {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.detail-image {
+  width: 260px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.detail-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-info h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.detail-info p {
+  margin: 8px 0;
+  color: #444;
+}
+
+.detail-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* Jump links */
+.jump-links,
+.jumplinks {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jump-links button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Voice controls - keep it simple and prominent */
+.voice-controls {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-controls .primary-voice-bot {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--primary-color, #ff6b35);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(255,107,53,0.12);
+}
+
+.voice-controls .primary-voice-bot:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Instructions / nutrition sections */
+.instructions, .nutrition {
+  margin-top: 20px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,0.04);
+}
+
+.instructions h2, .nutrition h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+}
+
+/* Servings toggle */
+.servings-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.servings-toggle button {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  color: #111;
+}
+
+.servings-toggle button.active {
+  background: #f6f6f6;
+  border-color: var(--primary-color, #ff6b35);
+  color: var(--primary-color, #ff6b35);
+}
+
+.servings-note {
+  margin-left: 12px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* --- Ingredient table (stable layout for long names) --- */
+.ingredient-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 0 0;
+  table-layout: fixed; /* key: prevents layout jumps on long ingredient text */
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ingredient-table thead th {
+  text-align: left;
+  padding: 10px 8px;
+  font-weight: 700;
+  color: #222;
+  border-bottom: 2px solid rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.02);
+}
+
+.ingredient-table tbody td {
+  padding: 10px 8px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  vertical-align: top;
+  background: #fff;
+}
+
+/* narrow fixed column for amounts, flexible for ingredient names */
+.ingredient-table .col-amount {
+  width: 140px; /* leaves generous room for amounts like '1 1/2 cups' */
+  white-space: nowrap;
+}
+
+.ingredient-table .col-ingredient {
+  width: calc(100% - 140px);
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Styling inside cells */
+.ingredient-amount-cell .amount-inner {
+  font-weight: 800;
+  color: #111;
+  text-align: left;
+}
+
+.ingredient-name-cell .ingredient-inner {
+  color: #333;
+  line-height: 1.4;
+  display: block;
+  white-space: normal;
+  hyphens: auto;
+}
+
+/* Small visual separator for readability */
+.ingredient-table tbody tr:nth-child(odd) td {
+  background: rgba(0,0,0,0.01);
+}
+
+/* Fallback when ingredients list not present */
+.ingredient-table:empty {
+  display: none;
+}
+
+/* Instructions ordered list */
+.instructions ol {
+  padding-left: 18px;
+  color: #333;
+}
+
+.instructions li {
+  margin: 8px 0;
+  line-height: 1.45;
+}
+
+/* Nutrition label styles (tabular) */
+.nutrition-label {
+  border: 2px solid #111;
+  padding: 12px;
+  max-width: 520px;
+  background: #fff;
+  margin-top: 12px;
+}
+
+.nutrition-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 6px solid #111;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.nutrition-servings {
+  font-size: 0.95rem;
+  color: #222;
+}
+
+.nutrition-calories {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.nutrition-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.nutrition-table td {
+  padding: 6px 4px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.nutrient-name {
+  font-weight: 800;
+  width: 65%;
+}
+
+.nutrient-value {
+  text-align: right;
+  width: 20%;
+  font-weight: 700;
+}
+
+.nutrient-percent {
+  text-align: right;
+  width: 15%;
+  color: #222;
+  font-weight: 700;
+}
+
+/* micro nutrients list */
+.micro-nutrients {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.micro-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  padding: 6px 0;
+  border-top: 1px dashed rgba(0,0,0,0.04);
+}
+
+/* nutrition footnote */
+.nutrition-foot {
+  margin-top: 10px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* error state */
+.recipe-detail.error {
+  color: #b00020;
+  background: #fff6f6;
+  border: 1px solid #f5c6cb;
+}
+
+/* --- Embedded/persistent voice bar (compact) --- */
+.input-container.embedded {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  background: var(--bg, #fff);
+  padding: 8px 12px;
+  box-shadow: 0 -6px 18px rgba(30,40,50,0.04);
+  z-index: 90;
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
+
+.unified-input-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.unified-text-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  font-size: 1rem;
+  outline: none;
+}
+
+.unified-send-button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--primary-color, #ff6b35);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mic-button {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mic-button.listening {
+  box-shadow: 0 0 0 6px rgba(255,107,53,0.08);
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .ingredient-table .col-amount { width: 110px; }
+}
+
+@media (max-width: 700px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .detail-image {
+    width: 100%;
+    height: 200px;
+  }
+
+  .nutrition-label {
+    width: 100%;
+  }
+
+  .nutrition-table td {
+    padding: 8px 6px;
+  }
+
+  .ingredient-amount {
+    min-width: 70px;
+  }
+
+  .ingredient-table .col-amount {
+    width: 90px;
+  }
+
+  .unified-input-bar { padding: 0 6px; }
+}
+/* Layout / base */
+.recipe-detail {
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 20px;
+  color: #222;
+  background: var(--bg, #fff);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(30, 40, 50, 0.06);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.recipe-detail > button {
+  background: transparent;
+  border: none;
+  color: var(--primary-color, #ff6b35);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+/* Header */
+.detail-header {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.detail-image {
+  width: 260px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.detail-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-info h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.detail-info p {
+  margin: 8px 0;
+  color: #444;
+}
+
+.detail-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* Jump links */
+.jump-links,
+.jumplinks {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.jump-links button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Voice controls - keep it simple and prominent */
+.voice-controls {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.voice-controls .primary-voice-bot {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--primary-color, #ff6b35);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(255,107,53,0.12);
+}
+
+.voice-controls .primary-voice-bot:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Instructions / nutrition sections */
+.instructions, .nutrition {
+  margin-top: 20px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,0.04);
+}
+
+.instructions h2, .nutrition h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+}
+
+/* Servings toggle */
+.servings-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.servings-toggle button {
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+  color: #111;
+}
+
+.servings-toggle button.active {
+  background: #f6f6f6;
+  border-color: var(--primary-color, #ff6b35);
+  color: var(--primary-color, #ff6b35);
+}
+
+.servings-note {
+  margin-left: 12px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+/* --- Ingredient table (stable layout for long names) --- */
+.ingredient-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 0 0;
+  table-layout: fixed; /* key: prevents layout jumps on long ingredient text */
+  background: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ingredient-table thead th {
+  text-align: left;
+  padding: 10px 8px;
+  font-weight: 700;
+  color: #222;
+  border-bottom: 2px solid rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.02);
+}
+
+.ingredient-table tbody td {
+  padding: 10px 8px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  vertical-align: top;
+  background: #fff;
+}
+
+/* narrow fixed column for amounts, flexible for ingredient names */
+.ingredient-table .col-amount {
+  width: 140px; /* leaves generous room for amounts like '1 1/2 cups' */
+  white-space: nowrap;
+}
+
+.ingredient-table .col-ingredient {
+  width: calc(100% - 140px);
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Styling inside cells */
+.ingredient-amount-cell .amount-inner {
+  font-weight: 800;
+  color: #111;
+  text-align: left;
+}
+
+.ingredient-name-cell .ingredient-inner {
+  color: #333;
+  line-height: 1.4;
+  display: block;
+  white-space: normal;
+  hyphens: auto;
+}
+
+/* Small visual separator for readability */
+.ingredient-table tbody tr:nth-child(odd) td {
+  background: rgba(0,0,0,0.01);
+}
+
+/* Fallback when ingredients list not present */
+.ingredient-table:empty {
+  display: none;
+}
+
+/* Instructions ordered list */
+.instructions ol {
+  padding-left: 18px;
+  color: #333;
+}
+
+.instructions li {
+  margin: 8px 0;
+  line-height: 1.45;
+}
+
+/* Nutrition label styles (tabular) */
+.nutrition-label {
+  border: 2px solid #111;
+  padding: 12px;
+  max-width: 520px;
+  background: #fff;
+  margin-top: 12px;
+}
+
+.nutrition-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 6px solid #111;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.nutrition-servings {
+  font-size: 0.95rem;
+  color: #222;
+}
+
+.nutrition-calories {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.nutrition-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.nutrition-table td {
+  padding: 6px 4px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.nutrient-name {
+  font-weight: 800;
+  width: 65%;
+}
+
+.nutrient-value {
+  text-align: right;
+  width: 20%;
+  font-weight: 700;
+}
+
+.nutrient-percent {
+  text-align: right;
+  width: 15%;
+  color: #222;
+  font-weight: 700;
+}
+
+/* micro nutrients list */
+.micro-nutrients {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.micro-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  padding: 6px 0;
+  border-top: 1px dashed rgba(0,0,0,0.04);
+}
+
+/* nutrition footnote */
+.nutrition-foot {
+  margin-top: 10px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* error state */
+.recipe-detail.error {
+  color: #b00020;
+  background: #fff6f6;
+  border: 1px solid #f5c6cb;
+}
+
+/* --- Embedded/persistent voice bar (compact) --- */
+.input-container.embedded {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  background: var(--bg, #fff);
+  padding: 8px 12px;
+  box-shadow: 0 -6px 18px rgba(30,40,50,0.04);
+  z-index: 90;
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
+
+.unified-input-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.unified-text-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  font-size: 1rem;
+  outline: none;
+}
+
+.unified-send-button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--primary-color, #ff6b35);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mic-button {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.06);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mic-button.listening {
+  box-shadow: 0 0 0 6px rgba(255,107,53,0.08);
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .ingredient-table .col-amount { width: 110px; }
+}
+
+@media (max-width: 700px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .detail-image {
+    width: 100%;
+    height: 200px;
+  }
+
+  .nutrition-label {
+    width: 100%;
+  }
+
+  .nutrition-table td {
+    padding: 8px 6px;
+  }
+
+  .ingredient-amount {
+    min-width: 70px;
+  }
+
+  .ingredient-table .col-amount {
+    width: 90px;
+  }
+
+  .unified-input-bar { padding: 0 6px; }
+}

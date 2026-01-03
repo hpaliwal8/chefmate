@@ -3,6 +3,7 @@ import { Heart, Clock, Users, Mic, ShoppingCart, Leaf, Wheat } from 'lucide-reac
 import { useAppContext } from '../context/AppContext';
 import { Recipe } from '../types';
 import '../styles/RecipeCard.css';
+import { useNavigate } from 'react-router-dom';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -18,9 +19,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, index }) => {
     isFavorite,
     addToShoppingList,
   } = useAppContext();
+  const navigate = useNavigate();
 
   const handleViewDetails = () => {
     setCurrentRecipe(recipe);
+    // set in context for quick access and navigate to detail view which will fetch full details
+    setCurrentRecipe(recipe);
+    navigate(`/recipe/${recipe.id}`);
   };
 
   const handleStartCooking = () => {
